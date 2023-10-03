@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Persona_API.Dats;
 using Persona_API.Models;
 // importamos la clase personadto de la clase models
@@ -38,7 +39,7 @@ namespace Persona_API.Controllers
 
 
         // VERBO GET  -- obtener un solo dato de la tabla Persona como parametro en la url se tiene que escribir el id que se quiere obtener 
-        [HttpGet("{id:int}", Name ="Getvilla")]
+        [HttpGet("id:int", Name ="Getvilla")]
         // vamos a documentar cada uno de los codigos de estados que vamos a tener para una peticion 
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -49,12 +50,11 @@ namespace Persona_API.Controllers
             // verificamos cuando el la persona haca una peticion con el id 0
             if (id == 0)
             {
+
                 // si el usuario busca el id  le mostramos un codigo de estado 400
                 return BadRequest();
             }
 
-            //--cambiamos--
-            //var persona = PersonaDatos.PersonaList.FirstOrDefault(v => v.Id == id);
             var persona = _db.Personas.FirstOrDefault(v => v.Id == id);
             // validamos si es null entonces le mostramos un codigo 404
             if (persona == null)
@@ -80,13 +80,13 @@ namespace Persona_API.Controllers
             // campo es requrido para que se guarde en la DB
             if (!ModelState.IsValid)
             {
-                return BadRequest(personaDto);
+                return BadRequest(ModelState);
             }
 
             // si no se esta enviando ningun dato 
             if (personaDto== null)
             {
-                return BadRequest();
+                return BadRequest(personaDto);
             }
 
         
@@ -95,12 +95,9 @@ namespace Persona_API.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
 
-            //--correcion---
-            // si esta todo correcto entonces se ingresa a la tabla, aqui incrementamos el id en mas 1 cada 
-            // vez que el usuario va ingresando un nuevo dato 
+            // creamos un nuevo modelo en base a la DB 
             Persona modelo = new()
             {
-                Id = personaDto.Id,
                 Name = personaDto.Name,
                 Description = personaDto.Description,
                 Registrationdate = personaDto.Registrationdate,
@@ -138,7 +135,7 @@ namespace Persona_API.Controllers
                 return NotFound();
             }
 
-            //---correccion--
+
             _db.Personas.Remove(persona);
             _db.SaveChanges();
             // no retornamos nada de esta funcion porque ya eliminamos el dato
@@ -158,13 +155,6 @@ namespace Persona_API.Controllers
                 return BadRequest();
             }
 
-            //--correccion---
-            // en caso que tdoo este bien se va actualizar los datos de la tabla
-            /* var persona = PersonaDatos.PersonaList.FirstOrDefault(v => v.Id == id);
-             personaDto.Name = personaDto.Name;
-             personaDto.Description= personaDto.Description;
-            */
-
             Persona modelo = new()
             {
                 Id = personaDto.Id,
@@ -175,7 +165,7 @@ namespace Persona_API.Controllers
             };
 
             // agregamos y guardamos a la DB
-            _db.Personas.Add(modelo);
+            _db.Personas.Update(modelo);
             _db.SaveChanges();
             return NoContent();
 
@@ -193,9 +183,7 @@ namespace Persona_API.Controllers
                 return BadRequest();
             }
 
-            //---correccion---
-           // var persona = PersonaDatos.PersonaList.FirstOrDefault(v => v.Id == id);
-           var persona = _db.Personas.FirstOrDefault(v => v.Id == id);
+           var persona = _db.Personas.AsNoTracking().FirstOrDefault(v => v.Id == id);
             PersonaDto personaDto = new()
             {
                 Id = persona.Id,
